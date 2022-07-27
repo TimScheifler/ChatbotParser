@@ -32,8 +32,8 @@ async def getBotpressFaqResponse(request: Request):
 This function is used to send messages back and forth between the backend and Botpress.
 '''
 
-@app.get("/botpress")
-async def getBotpressResponse(request: Request):
+@app.get("/botpress/intervention")
+async def getBotpressInterventionResponse(request: Request):
     body = await request.json()
 
     jwt = request.headers.get('jwt')
@@ -43,8 +43,8 @@ async def getBotpressResponse(request: Request):
 
 
 
-@app.get("/jwt")
-async def getJwt():
+@app.get("/botpress/jwt")
+async def getBotpressJwt():
     host = secrets.get('IP')
     port = secrets.get('PORT')
 
@@ -62,7 +62,7 @@ async def getJwt():
 
 @app.get("/")
 async def greet():
-    return {"msg":"Hello World!"}
+    return {"msg":"Hello Traveller! :)"}
 
 
 def __sendMessageToBotpress(msg, session_uuid, jwt):
