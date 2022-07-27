@@ -1,12 +1,9 @@
 from .botpress_secrets import secrets as botpress_secrets
 from .rasa_secrets import secrets as rasa_secrets
-from time import time
-from fastapi import FastAPI, Header, Request
-from typing import Union
+from fastapi import FastAPI, Request
 
 import logging
 import requests
-import json
 
 LOGGER = logging.getLogger(__name__)
 
@@ -81,7 +78,7 @@ async def getRasaFaqResoinse(request: Request):
 async def greet():
     return {"msg":"Hello Traveller! :)"}
 
-
+#TODO es gibt viele Überschneidungungen zwischen __sendMessageToBotpress und __sendMessageToRasa. Diese sollten bestmöglichst entfernt werden.
 def __sendMessageToBotpress(msg, session_uuid, jwt):
     host = botpress_secrets.get('IP')
     port = botpress_secrets.get('PORT')
