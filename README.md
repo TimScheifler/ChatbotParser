@@ -58,6 +58,14 @@ It will probably be deprecated in the future. Botpress does need the 'JWT-Token'
 when switching between interventions and faq mode.
 
 
+### /rasa/intervention
+By calling this endpoint you are sending a message to rasa. You HAVE to provide the following 2 body parameters: msg and session_uuid
+which is the participant_uuid + a timestamp. This is currently needed, because we aren't saving the dialog state when we are closing the app. 
+It will probably be deprecated in the future.
+
+### /rasa/faq
+same as '/botpress/faq'
+
 
 ## Response Format
 The response format looks like this:

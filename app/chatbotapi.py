@@ -25,7 +25,6 @@ async def getBotpressFaqResponse(request: Request):
 
     return __sendMessageToBotpress(msg, session_uuid + '_faq', jwt)
 
-
 '''
 This function is used to send messages back and forth between the backend and Botpress.
 '''
@@ -38,8 +37,6 @@ async def getBotpressInterventionResponse(request: Request):
     msg = body['msg']
     session_uuid = body['session_uuid']
     return __sendMessageToBotpress(msg, session_uuid, jwt)
-
-
 
 @app.get("/botpress/jwt")
 async def getBotpressJwt():
@@ -54,7 +51,6 @@ async def getBotpressJwt():
     response = requests.post(auth_url, json=auth_payload)
 
     return { "jwt":response.json()['payload']['jwt']}
-
 
 @app.get("/rasa/intervention")
 async def getRasaInterventionResponse(request: Request):
@@ -129,7 +125,6 @@ def __sendMessageToRasa(msg, session_uuid):
     url = "http://" + host + ":" + port + "/webhooks/rest/webhook?token=" + token
 
     payload = {"sender": session_uuid, "message": msg}
-    # headers = {'content-type': 'application/json'}
 
     response = requests.post(url, json=payload)
 
