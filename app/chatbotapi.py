@@ -74,7 +74,6 @@ async def getRasaFaqResoinse(request: Request):
 async def greet():
     return {"msg":"Hello Traveller! :)"}
 
-#TODO es gibt viele Überschneidungungen zwischen __sendMessageToBotpress und __sendMessageToRasa. Diese sollten bestmöglichst entfernt werden.
 def __sendMessageToBotpress(msg, session_uuid, jwt):
     host = botpress_secrets.get('IP')
     port = botpress_secrets.get('PORT')
@@ -91,6 +90,28 @@ def __sendMessageToBotpress(msg, session_uuid, jwt):
     response_json = response.json()
     LOGGER.warning("RESPONSE: " + str(response_json))
     data = response.json()['responses']
+
+    answer = __parseResponse(data)
+    return answer
+
+
+def __sendMessageToRasa(msg, session_uuid):
+    host = rasa_secrets.get('IP')
+    port = rasa_secrets.get('PORT')
+    token = rasa_secrets.get('TOKEN')
+
+    msg_url = "http://" + host + ":" + port + "/webhooks/rest/webhook?token=" + token
+
+    payload = {"sender": session_uuid, "message": msg}
+
+    response = requests.post(msg_url, json=payload)
+
+    data = response.json()
+
+    answer = __parseResponse(data)
+    return answer
+
+def __parseResponse(data):
     answer = {}
     text = ''
     counter = 0
@@ -99,7 +120,7 @@ def __sendMessageToBotpress(msg, session_uuid, jwt):
     answer['data']['done'] = 'true'
     answer['data']['flow'] = 'default'
     for element in data:
-        answer['data']['answer_type'] = element['type']
+        answer['data']['answer_type'] = 'text'
         answer['data']['done'] = 'true'
         if element['text'] == '$end':
             if '---' in text:
@@ -107,45 +128,6 @@ def __sendMessageToBotpress(msg, session_uuid, jwt):
             else:
                 answer['data']['flow'] = text
                 text = ""
-        else:
-            answer['data']['done'] = 'false'
-            if counter > 0:
-                text = text + '---'
-            text = text + element['text']
-        counter = counter + 1
-
-    answer['data']['message'] = text
-    return answer
-
-def __sendMessageToRasa(msg, session_uuid):
-    host = rasa_secrets.get('IP')
-    port = rasa_secrets.get('PORT')
-    token = rasa_secrets.get('TOKEN')
-
-    url = "http://" + host + ":" + port + "/webhooks/rest/webhook?token=" + token
-
-    payload = {"sender": session_uuid, "message": msg}
-
-    response = requests.post(url, json=payload)
-
-    data = response.json()
-
-    answer = {}
-    text = ''
-    counter = 0
-    answer['type'] = 'message'
-    answer['data'] = {}
-    answer['data']['done'] = 'true'
-    answer['data']['flow'] = 'default'
-
-    for element in data:
-        answer['data']['answer_type'] = 'text'
-        if element['text'] == '$end':
-            answer['data']['done'] = 'true'
-            if '---' in text:
-                answer['data']['flow'] = text.split('---')[-1]
-            else:
-                answer['data']['flow'] = text
         else:
             answer['data']['done'] = 'false'
             if counter > 0:
