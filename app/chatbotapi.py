@@ -12,15 +12,18 @@ app = FastAPI()
 
 chatbot = "BOTPRESS"
 
-'''
-This function is used to send a question to Botpress. It is using another UUID then the normal user to differenciate between both.
-It is possible to just answer these questions by using the FaQ function of Botpress itself, but it is possible, that a question
-will need more context (so more messages back and forth). So it might be better to handle them like a dialogue.
-'''
-
-
 @app.get('/startsession')
 async def startSession(request: Request):
+    '''
+    This endpoint is used to start a chatbot session. The session start depends on the variable {chatbot}. It can be
+    either RASA or BOTPRESS but can be extended by other Chatbot Frameworks.
+    :param request: We do need the participant_uuid to generate a suitable session_uuid. The session_uuid is just a
+    combination of the participant_uuid and the current timestamp.
+    This is currently needed, because we aren't saving the dialog state when we are closing the app.
+    It will probably be removed in the future.
+    :return: If the chatbot is RASA, we are only returning {"session_uuid": <session_uuid>}. If the chatbot is BOTPRESS,
+    we are returning  {"jwt": <jwt>, "session_uuid": <session_uuid>} since the JWT-Token is needed for authorization.
+    '''
     session_credentials = {"test":"this should not be printed..."}
     body = await request.json()
     participant_uuid = body['participant_uuid']
@@ -44,6 +47,12 @@ async def startSession(request: Request):
 
 @app.get('/intervention')
 async def getInterventionResponse(request: Request):
+    '''
+    By calling this endpoint you are sending a message to the chosen chatbot to continue it's intervention
+    :param request: You MUST provide the following 2 body parameters: msg and session_credentials. If the Chatbot Framework
+    is Botpress, we also need the JWT-Token which is provided in the Header.
+    :return: The parsed Intervention answer.
+    '''
     body = await request.json()
 
     msg = body['msg']
@@ -57,6 +66,14 @@ async def getInterventionResponse(request: Request):
 
 @app.get('/faq')
 async def getFaqResponse(request: Request):
+    '''
+    By calling this endpoint you are sending a message to the chosen chatbots faq. This will start a new session with
+    a new session_uuid which is a combination of the session_uuid and "_faq" to prevent us from interrupting the
+    current intervention.
+    :param request: You MUST provide the following 2 body parameters: msg and session_credentials. If the Chatbot Framework
+    is Botpress, we also need the JWT-Token which is provided in the Header.
+    :return: The parsed FaQ answer.
+    '''
     body = await request.json()
 
     msg = body['msg']
@@ -70,9 +87,18 @@ async def getFaqResponse(request: Request):
 
 @app.get("/")
 async def greet():
+    '''
+    Method to check if this application is up and running.
+    :return: A message to see if the ChatbotParser is up and running.
+    '''
     return {"msg":"ChatbotParser is up and running!"}
 
 def __getSessionUuId(participant_uuid):
+    '''
+    A function to generate a new session_uuid
+    :param participant_uuid: participant_uuid
+    :return: a new session_uuid
+    '''
     return participant_uuid+"_"+str(time())
 
 def __sendMessageToBotpress(msg, session_uuid, jwt):
@@ -94,7 +120,6 @@ def __sendMessageToBotpress(msg, session_uuid, jwt):
 
     answer = __parseResponse(data)
     return answer
-
 
 def __sendMessageToRasa(msg, session_uuid):
     host = rasa_secrets.get('IP')
