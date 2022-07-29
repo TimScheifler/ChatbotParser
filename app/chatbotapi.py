@@ -1,6 +1,7 @@
 from .botpress_secrets import secrets as botpress_secrets
 from .rasa_secrets import secrets as rasa_secrets
 from fastapi import FastAPI, Request
+from time import time
 
 import logging
 import requests
@@ -9,70 +10,70 @@ LOGGER = logging.getLogger(__name__)
 
 app = FastAPI()
 
+chatbot = "BOTPRESS"
+
 '''
 This function is used to send a question to Botpress. It is using another UUID then the normal user to differenciate between both.
 It is possible to just answer these questions by using the FaQ function of Botpress itself, but it is possible, that a question
 will need more context (so more messages back and forth). So it might be better to handle them like a dialogue.
 '''
 
-@app.get("/botpress/faq")
-async def getBotpressFaqResponse(request: Request):
+
+@app.get('/startsession')
+async def startSession(request: Request):
+    session_credentials = {"test":"this should not be printed..."}
     body = await request.json()
+    participant_uuid = body['participant_uuid']
+    if chatbot is "RASA":
+        session_uuid = __getSessionUuId(participant_uuid)
+        session_credentials =  {"session_uuid": session_uuid}
+    elif chatbot is "BOTPRESS":
+        session_uuid = __getSessionUuId(participant_uuid)
+        host = botpress_secrets.get('IP')
+        port = botpress_secrets.get('PORT')
+        pw = botpress_secrets.get('PW')
+        email = botpress_secrets.get('EMAIL')
 
-    jwt = request.headers.get('jwt')
-    msg = body['msg']
-    session_uuid = body['session_uuid']
+        auth_url = 'http://' + host + ':' + port + '/api/v1/auth/login/basic/default';
+        auth_payload = {'email': email, 'password': pw}
 
-    return __sendMessageToBotpress(msg, session_uuid + '_faq', jwt)
+        response = requests.post(auth_url, json=auth_payload)
 
-'''
-This function is used to send messages back and forth between the backend and Botpress.
-'''
+        session_credentials = {"jwt": response.json()['payload']['jwt'], "session_uuid": session_uuid}
+    return session_credentials
 
-@app.get("/botpress/intervention")
-async def getBotpressInterventionResponse(request: Request):
-    body = await request.json()
-
-    jwt = request.headers.get('jwt')
-    msg = body['msg']
-    session_uuid = body['session_uuid']
-    return __sendMessageToBotpress(msg, session_uuid, jwt)
-
-@app.get("/botpress/jwt")
-async def getBotpressJwt():
-    host = botpress_secrets.get('IP')
-    port = botpress_secrets.get('PORT')
-    pw = botpress_secrets.get('PW')
-    email = botpress_secrets.get('EMAIL')
-
-    auth_url = 'http://' + host + ':' + port + '/api/v1/auth/login/basic/default';
-    auth_payload = {'email': email, 'password': pw}
-
-    response = requests.post(auth_url, json=auth_payload)
-
-    return { "jwt":response.json()['payload']['jwt']}
-
-@app.get("/rasa/intervention")
-async def getRasaInterventionResponse(request: Request):
+@app.get('/intervention')
+async def getInterventionResponse(request: Request):
     body = await request.json()
 
     msg = body['msg']
     session_uuid = body['session_uuid']
 
-    return __sendMessageToRasa(msg, session_uuid)
+    if chatbot is "RASA":
+        return __sendMessageToRasa(msg, session_uuid)
+    elif chatbot is "BOTPRESS":
+        jwt = request.headers.get('jwt')
+        return __sendMessageToBotpress(msg, session_uuid, jwt)
 
-@app.get("/rasa/faq")
-async def getRasaFaqResoinse(request: Request):
+@app.get('/faq')
+async def getFaqResponse(request: Request):
     body = await request.json()
 
     msg = body['msg']
     session_uuid = body['session_uuid']
 
-    return __sendMessageToRasa(msg, session_uuid + '_faq')
+    if chatbot is "RASA":
+        return __sendMessageToRasa(msg, session_uuid + "_faq")
+    elif chatbot is "BOTPRESS":
+        jwt = request.headers.get('jwt')
+        return __sendMessageToBotpress(msg, session_uuid + "_faq", jwt)
 
 @app.get("/")
 async def greet():
-    return {"msg":"Hello Traveller! :)"}
+    return {"msg":"ChatbotParser is up and running!"}
+
+def __getSessionUuId(participant_uuid):
+    return participant_uuid+"_"+str(time())
 
 def __sendMessageToBotpress(msg, session_uuid, jwt):
     host = botpress_secrets.get('IP')
