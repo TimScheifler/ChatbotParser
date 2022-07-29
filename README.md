@@ -41,30 +41,38 @@ docker run -p 3001:3001 <image_name>
 
 ## Endpoints
 ### /
-Used to greet you :)
+Method to check if this application is up and running.
 
-### /botpress/jwt
-By calling this endpoint you are requesting an 'JWT-Token', which is required for further communication between the backend and botpress.
-So we have to call it first before starting a dialogue with botpress.
-No request body needed.
+### /startsession
+This endpoint is used to start a chatbot session. The session start depends on the variable {chatbot}. It can be
+either RASA or BOTPRESS but can be extended by other Chatbot Frameworks.
 
-### /botpress/intervention
-By calling this endpoint you are sending a message to botpress. You HAVE to provide the following 2 body parameters: msg and session_uuid
-which is the participant_uuid + a timestamp. This is currently needed, because we aren't saving the dialog state when we are closing the app. 
-It will probably be deprecated in the future. Botpress does need the 'JWT-Token' for authentication, so we need to add it to our request header.
+We do need the participant_uuid to generate a suitable session_uuid. The session_uuid is just a
+combination of the participant_uuid and the current timestamp.
+This is currently needed, because we aren't saving the dialog state when we are closing the app.
+It will probably be removed in the future.
 
-### /botpress/faq
-'/botpress/faq' is almost the same as '/botpress/intervention'. The only difference is that we are starting a new session for the user so that we won't get conflicts
-when switching between interventions and faq mode.
+If the chatbot is RASA, we are only returning {"session_uuid": <session_uuid>}. 
 
+If the chatbot is BOTPRESS, we are returning  {"jwt": <jwt>, "session_uuid": <session_uuid>} since the JWT-Token is needed for authorization.
 
-### /rasa/intervention
-By calling this endpoint you are sending a message to rasa. You HAVE to provide the following 2 body parameters: msg and session_uuid
-which is the participant_uuid + a timestamp. This is currently needed, because we aren't saving the dialog state when we are closing the app. 
-It will probably be deprecated in the future.
+### /intervention
+By calling this endpoint you are sending a message to the chosen chatbot to continue it's intervention
 
-### /rasa/faq
-same as '/botpress/faq'
+You MUST provide the following 2 body parameters: msg and session_credentials. If the Chatbot Framework is Botpress, we also need the JWT-Token which is provided in the Header.
+
+It is returning the parsed intervention answer.
+
+### /faq
+By calling this endpoint you are sending a message to the chosen chatbots faq. This will start a new session with
+a new session_uuid which is a combination of the session_uuid and "_faq" to prevent us from interrupting the
+current intervention.
+
+You MUST provide the following 2 body parameters: msg and session_credentials. If the Chatbot Framework
+is Botpress, we also need the JWT-Token which is provided in the Header.
+
+This endpoint is returning our FaQ answer and has no influence on our intervention.
+
 
 
 ## Response Format
