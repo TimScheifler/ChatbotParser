@@ -1,0 +1,5 @@
+secrets = {
+    'IP': '',
+    'PORT': '',
+    'TOKEN': '',
+}
