@@ -10,8 +10,6 @@ LOGGER = logging.getLogger(__name__)
 
 app = FastAPI()
 
-chatbot = "BOTPRESS"
-
 @app.get('/startsession')
 async def startSession(request: Request):
     '''
@@ -26,10 +24,11 @@ async def startSession(request: Request):
     '''
     body = await request.json()
     participant_uuid = body['participant_uuid']
-    if chatbot is "RASA":
+    framework = str(body['framework'])
+    if framework == "RASA":
         session_uuid = __getSessionUuId(participant_uuid)
         session_credentials =  {"session_uuid": session_uuid}
-    elif chatbot is "BOTPRESS":
+    elif framework == "BOTPRESS":
         session_uuid = __getSessionUuId(participant_uuid)
         host = botpress_secrets.get('IP')
         port = botpress_secrets.get('PORT')
@@ -41,7 +40,8 @@ async def startSession(request: Request):
 
         response = requests.post(auth_url, json=auth_payload)
 
-        session_credentials = {"jwt": response.json()['payload']['jwt'], "session_uuid": session_uuid}
+        session_credentials = {"jwt": response.json()['payload']['jwt'], "session_uuid": session_uuid, "framework":framework,
+                               "intervention":body["intervention"]}
     return session_credentials
 
 @app.get('/intervention')
@@ -56,12 +56,13 @@ async def getInterventionResponse(request: Request):
 
     msg = body['msg']
     session_uuid = body['session_uuid']
-
-    if chatbot is "RASA":
+    framework = body['framework']
+    if framework == "RASA":
         return __sendMessageToRasa(msg, session_uuid)
-    elif chatbot is "BOTPRESS":
+    elif framework == "BOTPRESS":
         jwt = request.headers.get('jwt')
-        return __sendMessageToBotpress(msg, session_uuid, jwt)
+        intervention = body["intervention"]
+        return __sendMessageToBotpress(msg, session_uuid, jwt, intervention)
 
 @app.get('/faq')
 async def getFaqResponse(request: Request):
@@ -77,12 +78,14 @@ async def getFaqResponse(request: Request):
 
     msg = body['msg']
     session_uuid = body['session_uuid']
+    framework = body['framework']
 
-    if chatbot is "RASA":
+    if framework == "RASA":
         return __sendMessageToRasa(msg, session_uuid + "_faq")
-    elif chatbot is "BOTPRESS":
+    elif framework == "BOTPRESS":
         jwt = request.headers.get('jwt')
-        return __sendMessageToBotpress(msg, session_uuid + "_faq", jwt)
+        intervention = body["intervention"]
+        return __sendMessageToBotpress(msg, session_uuid + "_faq", jwt, intervention)
 
 @app.get("/")
 async def greet():
@@ -100,14 +103,13 @@ def __getSessionUuId(participant_uuid):
     '''
     return participant_uuid+"_"+str(time())
 
-def __sendMessageToBotpress(msg, session_uuid, jwt):
+def __sendMessageToBotpress(msg, session_uuid, jwt, intervention):
     host = botpress_secrets.get('IP')
     port = botpress_secrets.get('PORT')
-    bot_name = botpress_secrets.get('BOT')
 
     LOGGER.warning("TEEEST: " + msg + " " + session_uuid + " " + jwt)
 
-    msg_url = 'http://' + host + ':' + port + '/api/v1/bots/' + bot_name + '/converse/' + session_uuid + '/secured?include=nlu'
+    msg_url = 'http://' + host + ':' + port + '/api/v1/bots/' + intervention + '/converse/' + session_uuid + '/secured?include=nlu'
 
     msg_payload = {'type': 'text', 'text': msg}
     header = {'Authorization': 'Bearer ' + jwt}

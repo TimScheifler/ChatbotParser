@@ -3,5 +3,4 @@ secrets = {
     'PORT': '',
     'EMAIL': '',
     'PW': '',
-    'BOT': ''
 }
