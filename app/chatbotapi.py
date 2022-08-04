@@ -24,7 +24,6 @@ async def startSession(request: Request):
     :return: If the chatbot is RASA, we are only returning {"session_uuid": <session_uuid>}. If the chatbot is BOTPRESS,
     we are returning  {"jwt": <jwt>, "session_uuid": <session_uuid>} since the JWT-Token is needed for authorization.
     '''
-    session_credentials = {"test":"this should not be printed..."}
     body = await request.json()
     participant_uuid = body['participant_uuid']
     if chatbot is "RASA":
