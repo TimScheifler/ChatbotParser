@@ -40,8 +40,7 @@ async def startSession(request: Request):
 
         response = requests.post(auth_url, json=auth_payload)
 
-        session_credentials = {"jwt": response.json()['payload']['jwt'], "session_uuid": session_uuid, "framework":framework,
-                               "intervention":body["intervention"]}
+        session_credentials = {"jwt": response.json()['payload']['jwt'], "session_uuid": session_uuid, "chatbot":body["chatbot"]}
     return session_credentials
 
 @app.get('/intervention')
@@ -62,7 +61,7 @@ async def getInterventionResponse(request: Request):
         return __sendMessageToRasa(msg, session_uuid, port)
     elif framework == "Botpress":
         jwt = request.headers.get('jwt')
-        intervention = body["intervention"]
+        intervention = str(body["chatbot"]["id"])
         return __sendMessageToBotpress(msg, session_uuid, jwt, intervention)
 
 @app.get('/faq')
@@ -86,7 +85,7 @@ async def getFaqResponse(request: Request):
         return __sendMessageToRasa(msg, session_uuid + "_faq", port)
     elif framework == "Botpress":
         jwt = request.headers.get('jwt')
-        intervention = body["intervention"]
+        intervention = str(body["chatbot"]["id"])
         return __sendMessageToBotpress(msg, session_uuid + "_faq", jwt, intervention)
 
 @app.get("/")
