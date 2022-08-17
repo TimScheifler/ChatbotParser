@@ -79,11 +79,12 @@ async def getFaqResponse(request: Request):
 
     msg = body['msg']
     session_uuid = body['session_uuid']
-    framework = body['framework']
+    framework = str(body["chatbot"]["type"])
 
-    if framework == "RASA":
-        return __sendMessageToRasa(msg, session_uuid + "_faq")
-    elif framework == "BOTPRESS":
+    if framework == "Rasa":
+        port = body["chatbot"]["port"]
+        return __sendMessageToRasa(msg, session_uuid + "_faq", port)
+    elif framework == "Botpress":
         jwt = request.headers.get('jwt')
         intervention = body["intervention"]
         return __sendMessageToBotpress(msg, session_uuid + "_faq", jwt, intervention)
@@ -107,8 +108,6 @@ def __getSessionUuId(participant_uuid):
 def __sendMessageToBotpress(msg, session_uuid, jwt, intervention):
     host = botpress_secrets.get('IP')
     port = botpress_secrets.get('PORT')
-
-    LOGGER.warning("TEEEST: " + msg + " " + session_uuid + " " + jwt)
 
     msg_url = 'http://' + host + ':' + port + '/api/v1/bots/' + intervention + '/converse/' + session_uuid + '/secured?include=nlu'
 
