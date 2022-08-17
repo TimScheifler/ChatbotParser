@@ -24,11 +24,11 @@ async def startSession(request: Request):
     '''
     body = await request.json()
     participant_uuid = body['participant_uuid']
-    framework = str(body['framework'])
-    if framework == "RASA":
+    framework = str(body["chatbot"]["type"])
+    if framework == "Rasa":
         session_uuid = __getSessionUuId(participant_uuid)
-        session_credentials =  {"session_uuid": session_uuid}
-    elif framework == "BOTPRESS":
+        session_credentials =  {"session_uuid": session_uuid, "chatbot":body["chatbot"]}
+    elif framework == "Botpress":
         session_uuid = __getSessionUuId(participant_uuid)
         host = botpress_secrets.get('IP')
         port = botpress_secrets.get('PORT')
@@ -56,10 +56,11 @@ async def getInterventionResponse(request: Request):
 
     msg = body['msg']
     session_uuid = body['session_uuid']
-    framework = body['framework']
-    if framework == "RASA":
-        return __sendMessageToRasa(msg, session_uuid)
-    elif framework == "BOTPRESS":
+    framework = str(body["chatbot"]["type"])
+    if framework == "Rasa":
+        port = body["chatbot"]["port"]
+        return __sendMessageToRasa(msg, session_uuid, port)
+    elif framework == "Botpress":
         jwt = request.headers.get('jwt')
         intervention = body["intervention"]
         return __sendMessageToBotpress(msg, session_uuid, jwt, intervention)
@@ -122,9 +123,8 @@ def __sendMessageToBotpress(msg, session_uuid, jwt, intervention):
     answer = __parseResponse(data)
     return answer
 
-def __sendMessageToRasa(msg, session_uuid):
+def __sendMessageToRasa(msg, session_uuid, port):
     host = rasa_secrets.get('IP')
-    port = rasa_secrets.get('PORT')
     token = rasa_secrets.get('TOKEN')
 
     msg_url = "http://" + host + ":" + port + "/webhooks/rest/webhook?token=" + token
@@ -145,16 +145,20 @@ def __parseResponse(data):
     answer['type'] = 'message'
     answer['data'] = {}
     answer['data']['done'] = 'true'
-    answer['data']['flow'] = 'default'
+    answer['data']['flow'] = 'Default'
+    answer['data']['participantvar'] = {}
     for element in data:
         answer['data']['answer_type'] = 'text'
-        answer['data']['done'] = 'true'
         if element['text'] == '$end':
-            if '---' in text:
-                answer['data']['flow'] = text.split('---')[-1]
-            else:
-                answer['data']['flow'] = text
-                text = ""
+            answer['data']['done'] = 'true'
+        elif element['text'].startswith('$participantvar:'):
+            splitText = element['text'].split(':')
+            varName = splitText[1]
+            varVal = splitText[2]
+            answer['data']['participantvar'][varName] = varVal
+        elif element['text'].startswith('$path:'):
+            splitText = element['text'].split(':')
+            answer['data']['flow'] = splitText[1]
         else:
             answer['data']['done'] = 'false'
             if counter > 0:
