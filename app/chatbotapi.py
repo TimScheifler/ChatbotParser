@@ -27,7 +27,7 @@ async def startSession(request: Request):
     framework = str(body["chatbot"]["type"])
     if framework == "Rasa":
         session_uuid = __getSessionUuId(participant_uuid)
-        session_credentials =  {"session_uuid": session_uuid, "chatbot":body["chatbot"]}
+        session_credentials =  {"participant_uuid": participant_uuid, "session_uuid": session_uuid, "chatbot":body["chatbot"]}
     elif framework == "Botpress":
         session_uuid = __getSessionUuId(participant_uuid)
         host = botpress_secrets.get('IP')
@@ -40,7 +40,7 @@ async def startSession(request: Request):
 
         response = requests.post(auth_url, json=auth_payload)
 
-        session_credentials = {"jwt": response.json()['payload']['jwt'], "session_uuid": session_uuid, "chatbot":body["chatbot"]}
+        session_credentials = {"participant_uuid": participant_uuid ,"jwt": response.json()['payload']['jwt'], "session_uuid": session_uuid, "chatbot":body["chatbot"]}
     return session_credentials
 
 @app.get('/intervention')
